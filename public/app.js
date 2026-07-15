@@ -1,18 +1,17 @@
 /* ============================================================
-   TR–1 · daily routine tracker · rev.B (accounts + cloud sync)
+   TR–1 · daily routine tracker · rev.E (local profile, no accounts)
    data model (localStorage "tr1-data"):
    {
      tasks: [{ id, name, created: "YYYY-MM-DD", archived: "YYYY-MM-DD"|null }],
      log:   { "YYYY-MM-DD": ["taskId", ...] }   // ids checked that day
    }
+   profile (localStorage "tr1-profile"): { name, dob: "YYYY-MM-DD" }
    Deleting a task archives it, so history and stats stay intact.
-   Sync: localStorage is the source of truth for instant UI;
-   every save() also PUTs to /api/data when logged in (debounced).
+   All data stays on the device — there is no server-side storage.
    ============================================================ */
 
 const STORE_KEY = "tr1-data";
-const TOKEN_KEY = "tr1-token";
-const USER_KEY = "tr1-user";
+const PROFILE_KEY = "tr1-profile";
 
 // ---------- state ----------
 
@@ -29,136 +28,63 @@ function load() {
 
 function save() {
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
-  scheduleSync();
 }
 
 const state = load();
 
-// ---------- cloud sync ----------
+// ---------- profile (name + birthdate, stored locally) ----------
 
-let token = localStorage.getItem(TOKEN_KEY);
-let username = localStorage.getItem(USER_KEY);
-let syncTimer = null;
-
-function setSyncLed(ok) {
-  const led = document.getElementById("led-sync");
-  led.classList.toggle("led-sync-ok", !!ok);
-}
-
-function scheduleSync() {
-  if (!token) return;
-  clearTimeout(syncTimer);
-  syncTimer = setTimeout(pushData, 800); // debounce rapid check-offs
-}
-
-async function pushData() {
-  if (!token) return;
+function loadProfile() {
   try {
-    const res = await fetch("/api/data", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-      body: JSON.stringify({ data: state }),
-    });
-    if (res.status === 401) return logout(true);
-    setSyncLed(res.ok);
-  } catch { setSyncLed(false); }
+    const p = JSON.parse(localStorage.getItem(PROFILE_KEY));
+    if (p && typeof p.name === "string" && /^\d{4}-\d{2}-\d{2}$/.test(p.dob || "")) return p;
+  } catch (e) { /* fall through */ }
+  return null;
 }
 
-async function pullData() {
-  if (!token) return;
-  try {
-    const res = await fetch("/api/data", {
-      headers: { Authorization: "Bearer " + token },
-    });
-    if (res.status === 401) return logout(true);
-    if (!res.ok) return setSyncLed(false);
-    const { data } = await res.json();
-    if (data && Array.isArray(data.tasks)) {
-      // server copy wins unless it's empty and local has content (first sync)
-      const serverEmpty = data.tasks.length === 0 && Object.keys(data.log || {}).length === 0;
-      const localHasData = state.tasks.length > 0;
-      if (serverEmpty && localHasData) {
-        pushData(); // upload local data to the fresh account
-      } else {
-        state.tasks = data.tasks;
-        state.log = data.log || {};
-        localStorage.setItem(STORE_KEY, JSON.stringify(state));
-      }
-    }
-    setSyncLed(true);
-    renderToday();
-  } catch { setSyncLed(false); }
+let profile = loadProfile();
+
+function ageFrom(dob) {
+  const [y, m, d] = dob.split("-").map(Number);
+  const now = new Date();
+  let age = now.getFullYear() - y;
+  if (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d)) age--;
+  return age;
 }
-
-// ---------- auth UI ----------
-
-const authEl = document.getElementById("auth");
-const authForm = document.getElementById("auth-form");
-const authError = document.getElementById("auth-error");
-const authToggle = document.getElementById("auth-toggle");
-const authSubmit = document.getElementById("auth-submit");
-let authMode = "login";
 
 function updateAccountUi() {
-  document.getElementById("account-btn").textContent = username || "offline";
+  const btn = document.getElementById("account-btn");
+  btn.textContent = profile ? `${profile.name} · ${ageFrom(profile.dob)}` : "set up";
   document.getElementById("footnote-mode").textContent = "made by Aquma";
-  setSyncLed(!!username);
 }
 
-function showAuth(show) {
-  authEl.classList.toggle("hidden", !show);
-  authError.textContent = "";
-}
+// ---------- welcome overlay ----------
 
-authToggle.addEventListener("click", () => {
-  authMode = authMode === "login" ? "register" : "login";
-  authSubmit.textContent = authMode === "login" ? "log in" : "create account";
-  authToggle.textContent = authMode === "login" ? "create account" : "back to log in";
-  authError.textContent = "";
-});
+const welcomeEl = document.getElementById("welcome");
+const welcomeError = document.getElementById("welcome-error");
 
-authForm.addEventListener("submit", async e => {
-  e.preventDefault();
-  authError.textContent = "";
-  authSubmit.disabled = true;
-  try {
-    const res = await fetch("/api/" + authMode, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: document.getElementById("auth-user").value.trim(),
-        password: document.getElementById("auth-pass").value,
-      }),
-    });
-    const body = await res.json();
-    if (!res.ok) { authError.textContent = body.error || "something went wrong"; return; }
-    token = body.token;
-    username = body.username;
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, username);
-    updateAccountUi();
-    showAuth(false);
-    await pullData();
-  } catch {
-    authError.textContent = "network error — are you offline?";
-  } finally {
-    authSubmit.disabled = false;
+function showWelcome(show) {
+  welcomeEl.classList.toggle("hidden", !show);
+  welcomeError.textContent = "";
+  if (show && profile) {
+    // editing an existing profile: prefill
+    document.getElementById("welcome-name").value = profile.name;
+    document.getElementById("welcome-dob").value = profile.dob;
   }
-});
-
-document.getElementById("auth-skip").addEventListener("click", () => {
-  localStorage.setItem("tr1-skip-auth", "1");
-  showAuth(false);
-});
-
-function logout(expired) {
-  token = null;
-  username = null;
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-  updateAccountUi();
-  if (expired) showAuth(true);
 }
+
+document.getElementById("welcome-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = document.getElementById("welcome-name").value.trim().slice(0, 20);
+  const dob = document.getElementById("welcome-dob").value;
+  if (!name) { welcomeError.textContent = "please enter your name"; return; }
+  const age = ageFrom(dob);
+  if (!dob || age < 0 || age > 120) { welcomeError.textContent = "please enter a valid birthdate"; return; }
+  profile = { name, dob };
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  updateAccountUi();
+  showWelcome(false);
+});
 
 // ---------- settings overlay ----------
 
@@ -169,9 +95,8 @@ function showSettings(show) {
   settingsEl.classList.toggle("hidden", !show);
   settingsMsg.textContent = "";
   if (show) {
-    document.getElementById("settings-account").textContent =
-      username ? `synced as ${username}` : "offline · no account";
-    document.getElementById("settings-auth-btn").textContent = username ? "log out" : "log in";
+    document.getElementById("settings-profile").textContent =
+      profile ? `${profile.name} · ${ageFrom(profile.dob)} years` : "not set";
     document.getElementById("reminder-time").value = localStorage.getItem(REMINDER_KEY) || "";
   }
 }
@@ -179,16 +104,9 @@ function showSettings(show) {
 document.getElementById("account-btn").addEventListener("click", () => showSettings(true));
 document.getElementById("settings-close").addEventListener("click", () => showSettings(false));
 
-document.getElementById("settings-auth-btn").addEventListener("click", () => {
-  if (username) {
-    if (confirm(`logged in as ${username}.\nlog out? (data stays on this device)`)) {
-      logout(false);
-      showSettings(true); // refresh labels
-    }
-  } else {
-    showSettings(false);
-    showAuth(true);
-  }
+document.getElementById("profile-edit-btn").addEventListener("click", () => {
+  showSettings(false);
+  showWelcome(true);
 });
 
 // --- export / import ---
@@ -597,24 +515,19 @@ document.querySelectorAll(".tabs .tab").forEach(tab => {
 // re-render at midnight rollover / when app resumes; check reminder each tick
 let lastDay = today();
 setInterval(() => {
-  if (today() !== lastDay) { lastDay = today(); renderToday(); }
+  if (today() !== lastDay) { lastDay = today(); renderToday(); updateAccountUi(); }
   checkReminder();
 }, 30000);
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) { renderToday(); pullData(); checkReminder(); }
+  if (!document.hidden) { renderToday(); updateAccountUi(); checkReminder(); }
 });
-window.addEventListener("online", () => pushData());
 
 // ---------- boot ----------
 
 updateAccountUi();
 renderToday();
 
-if (token) {
-  pullData(); // logged in: refresh from cloud
-} else if (!localStorage.getItem("tr1-skip-auth")) {
-  showAuth(true); // first visit: offer account or offline mode
-}
+if (!profile) showWelcome(true); // first visit: ask name + birthdate
 
 // ---------- offline support ----------
 

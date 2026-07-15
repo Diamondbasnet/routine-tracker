@@ -20,19 +20,20 @@
 <body>
   <main class="device">
 
-    <!-- ===== auth overlay ===== -->
-    <section id="auth" class="auth hidden">
+    <!-- ===== welcome overlay (first run: local profile) ===== -->
+    <section id="welcome" class="auth hidden">
       <div class="brand center">
         <h1>TR–1</h1>
         <span class="sub">daily routine tracker</span>
       </div>
-      <form id="auth-form" class="auth-form" autocomplete="on">
-        <input id="auth-user" type="text" placeholder="username" autocapitalize="none" autocomplete="username" maxlength="20" required>
-        <input id="auth-pass" type="password" placeholder="password (8+ chars)" autocomplete="current-password" required>
-        <p id="auth-error" class="auth-error"></p>
-        <button type="submit" class="tab active" id="auth-submit">log in</button>
-        <button type="button" class="tab" id="auth-toggle">create account</button>
-        <button type="button" class="auth-skip" id="auth-skip">use offline without account →</button>
+      <form id="welcome-form" class="auth-form" autocomplete="off">
+        <label class="field-label" for="welcome-name">your name</label>
+        <input id="welcome-name" type="text" placeholder="name" maxlength="20" required>
+        <label class="field-label" for="welcome-dob">your birthdate</label>
+        <input id="welcome-dob" type="date" required>
+        <p id="welcome-error" class="auth-error"></p>
+        <button type="submit" class="tab active">start →</button>
+        <p class="privacy-note">your data is stored on this device only —<br>nothing is sent to the cloud</p>
       </form>
     </section>
 
@@ -43,11 +44,12 @@
         <span class="sub">settings</span>
       </div>
       <div class="settings-body">
-        <div class="panel-label">account</div>
+        <div class="panel-label">profile</div>
         <div class="settings-row">
-          <span id="settings-account">offline</span>
-          <button type="button" class="mini-btn" id="settings-auth-btn">log in</button>
+          <span id="settings-profile">—</span>
+          <button type="button" class="mini-btn" id="profile-edit-btn">edit</button>
         </div>
+        <p class="settings-hint">your data is stored on this device only — not on the cloud</p>
 
         <div class="panel-label">daily reminder</div>
         <div class="settings-row">
@@ -79,10 +81,10 @@
       <div class="head-right">
         <div class="leds" aria-hidden="true">
           <span class="led led-orange" id="led-activity"></span>
-          <span class="led led-black" id="led-sync" title="sync status"></span>
+          <span class="led led-black"></span>
           <span class="led led-hollow"></span>
         </div>
-        <button id="account-btn" class="account-btn" type="button">offline</button>
+        <button id="account-btn" class="account-btn" type="button">—</button>
       </div>
     </header>
 
@@ -134,7 +136,7 @@
       <button class="tab" data-screen="stats">records</button>
     </nav>
 
-    <footer class="footnote">TR–1 · rev.D · <span id="footnote-mode">made by Aquma</span></footer>
+    <footer class="footnote">TR–1 · rev.E · <span id="footnote-mode">made by Aquma</span></footer>
   </main>
 
   <script src="./app.js"></script>
