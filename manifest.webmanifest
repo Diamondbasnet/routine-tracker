@@ -1,0 +1,14 @@
+{
+  "name": "TR-1 daily routine tracker",
+  "short_name": "TR-1",
+  "description": "Checklist your daily routine. History, streaks, records.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e8e6e0",
+  "theme_color": "#e3e1db",
+  "icons": [
+    { "src": "./icons/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

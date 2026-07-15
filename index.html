@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>TR–1 · daily routine tracker</title>
+
+  <meta name="theme-color" content="#e3e1db">
+  <link rel="manifest" href="./manifest.webmanifest">
+
+  <!-- iOS "install to home screen" support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="TR–1">
+  <link rel="apple-touch-icon" href="./icons/icon-180.png">
+  <link rel="icon" type="image/png" href="./icons/icon-180.png">
+
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="device">
+
+    <!-- ===== faceplate header ===== -->
+    <header class="faceplate">
+      <div class="brand">
+        <h1>TR–1</h1>
+        <span class="sub">daily routine tracker</span>
+      </div>
+      <div class="leds" aria-hidden="true">
+        <span class="led led-orange" id="led-activity"></span>
+        <span class="led led-black"></span>
+        <span class="led led-hollow"></span>
+      </div>
+    </header>
+
+    <div class="dateline">
+      <span id="date-label">—</span>
+      <span id="progress-label">0/0</span>
+    </div>
+
+    <!-- segmented VU-style progress meter -->
+    <div class="meter" id="meter" aria-hidden="true"></div>
+
+    <!-- ===== screens ===== -->
+    <section id="screen-today" class="screen active">
+      <ul id="task-list" class="task-list"></ul>
+      <p id="empty-hint" class="empty-hint hidden">no actions yet.<br>add your first routine below ↓</p>
+      <form id="add-form" class="add-form" autocomplete="off">
+        <input id="add-input" type="text" placeholder="new action…" maxlength="60" required>
+        <button type="submit" class="knob-btn" aria-label="add action">+</button>
+      </form>
+    </section>
+
+    <section id="screen-history" class="screen">
+      <div class="panel-label">last 12 weeks</div>
+      <div id="heatmap" class="heatmap"></div>
+      <div class="heatmap-legend">
+        <span>less</span>
+        <span class="cell l0"></span><span class="cell l1"></span><span class="cell l2"></span><span class="cell l3"></span>
+        <span>more</span>
+      </div>
+      <div class="panel-label">recent days</div>
+      <ul id="day-log" class="day-log"></ul>
+    </section>
+
+    <section id="screen-stats" class="screen">
+      <div class="stat-grid">
+        <div class="stat-tile"><span class="stat-num" id="stat-streak">0</span><span class="stat-name">current streak</span></div>
+        <div class="stat-tile"><span class="stat-num" id="stat-best">0</span><span class="stat-name">best streak</span></div>
+        <div class="stat-tile"><span class="stat-num" id="stat-total">0</span><span class="stat-name">total check-ins</span></div>
+        <div class="stat-tile"><span class="stat-num" id="stat-perfect">0</span><span class="stat-name">perfect days</span></div>
+      </div>
+      <div class="panel-label">actions · 30-day rate</div>
+      <ul id="task-stats" class="task-stats"></ul>
+    </section>
+
+    <!-- ===== tab bar ===== -->
+    <nav class="tabs">
+      <button class="tab active" data-screen="today">today</button>
+      <button class="tab" data-screen="history">history</button>
+      <button class="tab" data-screen="stats">records</button>
+    </nav>
+
+    <footer class="footnote">TR–1 · rev.A · data stays on this device</footer>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
