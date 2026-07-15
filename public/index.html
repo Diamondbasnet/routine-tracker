@@ -36,6 +36,37 @@
       </form>
     </section>
 
+    <!-- ===== settings overlay ===== -->
+    <section id="settings" class="auth hidden">
+      <div class="brand center">
+        <h1>TR–1</h1>
+        <span class="sub">settings</span>
+      </div>
+      <div class="settings-body">
+        <div class="panel-label">account</div>
+        <div class="settings-row">
+          <span id="settings-account">offline</span>
+          <button type="button" class="mini-btn" id="settings-auth-btn">log in</button>
+        </div>
+
+        <div class="panel-label">daily reminder</div>
+        <div class="settings-row">
+          <input id="reminder-time" type="time">
+          <button type="button" class="mini-btn" id="reminder-clear">off</button>
+        </div>
+        <p class="settings-hint" id="reminder-hint">notifies you if today isn't done yet (while the app can run)</p>
+
+        <div class="panel-label">data</div>
+        <div class="settings-row">
+          <button type="button" class="mini-btn" id="export-btn">export json</button>
+          <button type="button" class="mini-btn" id="import-btn">import json</button>
+          <input id="import-file" type="file" accept=".json,application/json" hidden>
+        </div>
+        <p class="settings-hint" id="settings-msg"></p>
+      </div>
+      <button type="button" class="tab active" id="settings-close">close</button>
+    </section>
+
     <!-- ===== faceplate header ===== -->
     <header class="faceplate">
       <div class="brand">
@@ -100,7 +131,7 @@
       <button class="tab" data-screen="stats">records</button>
     </nav>
 
-    <footer class="footnote">TR–1 · rev.B · <span id="footnote-mode">data stays on this device</span></footer>
+    <footer class="footnote">TR–1 · rev.C · <span id="footnote-mode">data stays on this device</span></footer>
   </main>
 
   <script src="./app.js"></script>

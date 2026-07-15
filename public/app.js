@@ -161,13 +161,114 @@ function logout(expired) {
   if (expired) showAuth(true);
 }
 
-document.getElementById("account-btn").addEventListener("click", () => {
+// ---------- settings overlay ----------
+
+const settingsEl = document.getElementById("settings");
+const settingsMsg = document.getElementById("settings-msg");
+
+function showSettings(show) {
+  settingsEl.classList.toggle("hidden", !show);
+  settingsMsg.textContent = "";
+  if (show) {
+    document.getElementById("settings-account").textContent =
+      username ? `synced as ${username}` : "offline · no account";
+    document.getElementById("settings-auth-btn").textContent = username ? "log out" : "log in";
+    document.getElementById("reminder-time").value = localStorage.getItem(REMINDER_KEY) || "";
+  }
+}
+
+document.getElementById("account-btn").addEventListener("click", () => showSettings(true));
+document.getElementById("settings-close").addEventListener("click", () => showSettings(false));
+
+document.getElementById("settings-auth-btn").addEventListener("click", () => {
   if (username) {
-    if (confirm(`logged in as ${username}.\nlog out? (data stays on this device)`)) logout(false);
+    if (confirm(`logged in as ${username}.\nlog out? (data stays on this device)`)) {
+      logout(false);
+      showSettings(true); // refresh labels
+    }
   } else {
+    showSettings(false);
     showAuth(true);
   }
 });
+
+// --- export / import ---
+
+document.getElementById("export-btn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `tr1-backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  settingsMsg.textContent = "exported ✓";
+});
+
+document.getElementById("import-btn").addEventListener("click", () =>
+  document.getElementById("import-file").click());
+
+document.getElementById("import-file").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data.tasks) || typeof data.log !== "object") throw new Error("bad shape");
+    if (!confirm(`import ${data.tasks.length} actions?\nthis replaces current data.`)) return;
+    state.tasks = data.tasks;
+    state.log = data.log || {};
+    save();
+    renderToday();
+    settingsMsg.textContent = "imported ✓";
+  } catch {
+    settingsMsg.textContent = "not a valid TR-1 backup file";
+  }
+});
+
+// --- daily reminder (local notification while app/PWA is running) ---
+
+const REMINDER_KEY = "tr1-reminder";
+let reminderFiredFor = null; // day string it last fired
+
+document.getElementById("reminder-time").addEventListener("change", async e => {
+  const time = e.target.value;
+  if (!time) return;
+  if ("Notification" in window && Notification.permission === "default") {
+    await Notification.requestPermission();
+  }
+  if ("Notification" in window && Notification.permission !== "granted") {
+    settingsMsg.textContent = "notifications blocked — allow them in browser settings";
+    e.target.value = "";
+    return;
+  }
+  localStorage.setItem(REMINDER_KEY, time);
+  settingsMsg.textContent = `reminder set for ${time} ✓`;
+});
+
+document.getElementById("reminder-clear").addEventListener("click", () => {
+  localStorage.removeItem(REMINDER_KEY);
+  document.getElementById("reminder-time").value = "";
+  settingsMsg.textContent = "reminder off";
+});
+
+function checkReminder() {
+  const time = localStorage.getItem(REMINDER_KEY);
+  if (!time || !("Notification" in window) || Notification.permission !== "granted") return;
+  const day = today();
+  if (reminderFiredFor === day) return;
+  const now = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  if (hhmm < time) return;
+  const r = ratioOn(day);
+  if (r !== null && r < 1) {
+    reminderFiredFor = day;
+    const tasks = activeTasksOn(day);
+    const done = doneOn(day).filter(id => tasks.some(t => t.id === id)).length;
+    new Notification("TR–1", { body: `${done}/${tasks.length} done today — finish your routine`, icon: "./icons/icon-180.png" });
+  } else {
+    reminderFiredFor = day; // all done (or nothing scheduled): don't nag
+  }
+}
 
 // ---------- date helpers (all local time) ----------
 
@@ -237,6 +338,22 @@ function renderToday() {
     const name = document.createElement("span");
     name.className = "task-name";
     name.textContent = t.name;
+    name.title = "tap to rename";
+    name.addEventListener("click", () => renameTask(t));
+
+    const move = document.createElement("span");
+    move.className = "move";
+    const up = document.createElement("button");
+    up.className = "move-btn";
+    up.textContent = "▲";
+    up.setAttribute("aria-label", `move ${t.name} up`);
+    up.addEventListener("click", () => moveTask(t, -1));
+    const down = document.createElement("button");
+    down.className = "move-btn";
+    down.textContent = "▼";
+    down.setAttribute("aria-label", `move ${t.name} down`);
+    down.addEventListener("click", () => moveTask(t, 1));
+    move.append(up, down);
 
     const del = document.createElement("button");
     del.className = "del";
@@ -244,7 +361,7 @@ function renderToday() {
     del.setAttribute("aria-label", `remove ${t.name}`);
     del.addEventListener("click", () => removeTask(t));
 
-    li.append(check, name, del);
+    li.append(check, name, move, del);
     taskListEl.appendChild(li);
   }
 
@@ -295,6 +412,27 @@ function addTask(name) {
 function removeTask(task) {
   if (!confirm(`remove "${task.name}"?\n(history is kept)`)) return;
   task.archived = today();
+  save();
+  renderToday();
+}
+
+function renameTask(task) {
+  const name = prompt("rename action:", task.name);
+  if (name === null) return;
+  const trimmed = name.trim().slice(0, 60);
+  if (!trimmed) return;
+  task.name = trimmed;
+  save();
+  renderToday();
+}
+
+function moveTask(task, dir) {
+  const i = state.tasks.indexOf(task);
+  // find the adjacent non-archived task to swap with
+  let j = i + dir;
+  while (j >= 0 && j < state.tasks.length && state.tasks[j].archived) j += dir;
+  if (j < 0 || j >= state.tasks.length) return;
+  [state.tasks[i], state.tasks[j]] = [state.tasks[j], state.tasks[i]];
   save();
   renderToday();
 }
@@ -431,13 +569,14 @@ document.querySelectorAll(".tabs .tab").forEach(tab => {
   });
 });
 
-// re-render at midnight rollover / when app resumes
+// re-render at midnight rollover / when app resumes; check reminder each tick
 let lastDay = today();
 setInterval(() => {
   if (today() !== lastDay) { lastDay = today(); renderToday(); }
+  checkReminder();
 }, 30000);
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) { renderToday(); pullData(); }
+  if (!document.hidden) { renderToday(); pullData(); checkReminder(); }
 });
 window.addEventListener("online", () => pushData());
 

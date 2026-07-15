@@ -8,8 +8,10 @@ across all your devices — or use it offline with no account at all.
 ## Features
 
 - **Today** — add actions, check them off with chunky orange buttons, VU-meter progress bar
+- **Edit your routine** — tap a name to rename, ▲▼ to reorder, × to remove (history kept)
 - **History** — 12-week heatmap (GitHub-contribution style) + recent day log
 - **Records** — current streak, best streak, perfect days, total check-ins, per-action 30-day completion rates
+- **Settings** — daily reminder notification, JSON export/import backup
 - **Accounts + cloud sync** — sign up with a username, records follow you across devices
 - **Offline mode** — works with no account; installable on iPhone/Android/desktop (PWA)
 

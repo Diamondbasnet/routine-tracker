@@ -375,3 +375,77 @@ body {
   color: var(--ink);
 }
 .led-sync-ok { background: var(--orange) !important; }
+
+/* ===== settings overlay ===== */
+.settings-body { display: flex; flex-direction: column; gap: 8px; }
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0 12px;
+  font-size: 13px;
+}
+.settings-row input[type="time"] {
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+}
+.mini-btn {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: var(--plate-deep);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--ink);
+}
+.mini-btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--ink); }
+.settings-hint {
+  font-size: 10px;
+  color: var(--ink-soft);
+  letter-spacing: .04em;
+  margin-bottom: 8px;
+  min-height: 14px;
+}
+
+/* ===== task reorder ===== */
+.move { display: flex; flex-direction: column; flex: none; }
+.move-btn {
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 8px;
+  line-height: 1.2;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.move-btn:hover { color: var(--orange); }
+.task-name { cursor: pointer; }
+
+/* ===== motion polish ===== */
+.screen.active { animation: screen-in .18s ease-out; }
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.task-item.done .check { animation: check-pop .18s ease-out; }
+@keyframes check-pop {
+  0% { transform: scale(.8); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.meter span.on { animation: seg-in .25s ease-out; }
+@keyframes seg-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .screen.active, .task-item.done .check, .meter span.on { animation: none; }
+}
