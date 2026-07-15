@@ -1,0 +1,16 @@
+# Render blueprint: creates the TR-1 web service automatically
+# when you pick "New +" -> "Blueprint" and select this repo.
+services:
+  - type: web
+    name: tr1-routine-tracker
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true          # Render generates a strong random secret
+      - key: DATABASE_URL
+        sync: false                  # paste your Neon connection string in the dashboard

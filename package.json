@@ -1,0 +1,18 @@
+{
+  "name": "tr1-routine-tracker",
+  "version": "2.0.0",
+  "description": "TR-1 daily routine tracker - PWA with user accounts and cloud sync",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
+  }
+}

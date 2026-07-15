@@ -20,16 +20,35 @@
 <body>
   <main class="device">
 
+    <!-- ===== auth overlay ===== -->
+    <section id="auth" class="auth hidden">
+      <div class="brand center">
+        <h1>TR–1</h1>
+        <span class="sub">daily routine tracker</span>
+      </div>
+      <form id="auth-form" class="auth-form" autocomplete="on">
+        <input id="auth-user" type="text" placeholder="username" autocapitalize="none" autocomplete="username" maxlength="20" required>
+        <input id="auth-pass" type="password" placeholder="password (8+ chars)" autocomplete="current-password" required>
+        <p id="auth-error" class="auth-error"></p>
+        <button type="submit" class="tab active" id="auth-submit">log in</button>
+        <button type="button" class="tab" id="auth-toggle">create account</button>
+        <button type="button" class="auth-skip" id="auth-skip">use offline without account →</button>
+      </form>
+    </section>
+
     <!-- ===== faceplate header ===== -->
     <header class="faceplate">
       <div class="brand">
         <h1>TR–1</h1>
         <span class="sub">daily routine tracker</span>
       </div>
-      <div class="leds" aria-hidden="true">
-        <span class="led led-orange" id="led-activity"></span>
-        <span class="led led-black"></span>
-        <span class="led led-hollow"></span>
+      <div class="head-right">
+        <div class="leds" aria-hidden="true">
+          <span class="led led-orange" id="led-activity"></span>
+          <span class="led led-black" id="led-sync" title="sync status"></span>
+          <span class="led led-hollow"></span>
+        </div>
+        <button id="account-btn" class="account-btn" type="button">offline</button>
       </div>
     </header>
 
@@ -81,7 +100,7 @@
       <button class="tab" data-screen="stats">records</button>
     </nav>
 
-    <footer class="footnote">TR–1 · rev.A · data stays on this device</footer>
+    <footer class="footnote">TR–1 · rev.B · <span id="footnote-mode">data stays on this device</span></footer>
   </main>
 
   <script src="./app.js"></script>

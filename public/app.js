@@ -1,14 +1,18 @@
 /* ============================================================
-   TR–1 · daily routine tracker
+   TR–1 · daily routine tracker · rev.B (accounts + cloud sync)
    data model (localStorage "tr1-data"):
    {
      tasks: [{ id, name, created: "YYYY-MM-DD", archived: "YYYY-MM-DD"|null }],
      log:   { "YYYY-MM-DD": ["taskId", ...] }   // ids checked that day
    }
    Deleting a task archives it, so history and stats stay intact.
+   Sync: localStorage is the source of truth for instant UI;
+   every save() also PUTs to /api/data when logged in (debounced).
    ============================================================ */
 
 const STORE_KEY = "tr1-data";
+const TOKEN_KEY = "tr1-token";
+const USER_KEY = "tr1-user";
 
 // ---------- state ----------
 
@@ -25,9 +29,145 @@ function load() {
 
 function save() {
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  scheduleSync();
 }
 
 const state = load();
+
+// ---------- cloud sync ----------
+
+let token = localStorage.getItem(TOKEN_KEY);
+let username = localStorage.getItem(USER_KEY);
+let syncTimer = null;
+
+function setSyncLed(ok) {
+  const led = document.getElementById("led-sync");
+  led.classList.toggle("led-sync-ok", !!ok);
+}
+
+function scheduleSync() {
+  if (!token) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushData, 800); // debounce rapid check-offs
+}
+
+async function pushData() {
+  if (!token) return;
+  try {
+    const res = await fetch("/api/data", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ data: state }),
+    });
+    if (res.status === 401) return logout(true);
+    setSyncLed(res.ok);
+  } catch { setSyncLed(false); }
+}
+
+async function pullData() {
+  if (!token) return;
+  try {
+    const res = await fetch("/api/data", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (res.status === 401) return logout(true);
+    if (!res.ok) return setSyncLed(false);
+    const { data } = await res.json();
+    if (data && Array.isArray(data.tasks)) {
+      // server copy wins unless it's empty and local has content (first sync)
+      const serverEmpty = data.tasks.length === 0 && Object.keys(data.log || {}).length === 0;
+      const localHasData = state.tasks.length > 0;
+      if (serverEmpty && localHasData) {
+        pushData(); // upload local data to the fresh account
+      } else {
+        state.tasks = data.tasks;
+        state.log = data.log || {};
+        localStorage.setItem(STORE_KEY, JSON.stringify(state));
+      }
+    }
+    setSyncLed(true);
+    renderToday();
+  } catch { setSyncLed(false); }
+}
+
+// ---------- auth UI ----------
+
+const authEl = document.getElementById("auth");
+const authForm = document.getElementById("auth-form");
+const authError = document.getElementById("auth-error");
+const authToggle = document.getElementById("auth-toggle");
+const authSubmit = document.getElementById("auth-submit");
+let authMode = "login";
+
+function updateAccountUi() {
+  document.getElementById("account-btn").textContent = username || "offline";
+  document.getElementById("footnote-mode").textContent = username
+    ? `synced as ${username}` : "data stays on this device";
+  setSyncLed(!!username);
+}
+
+function showAuth(show) {
+  authEl.classList.toggle("hidden", !show);
+  authError.textContent = "";
+}
+
+authToggle.addEventListener("click", () => {
+  authMode = authMode === "login" ? "register" : "login";
+  authSubmit.textContent = authMode === "login" ? "log in" : "create account";
+  authToggle.textContent = authMode === "login" ? "create account" : "back to log in";
+  authError.textContent = "";
+});
+
+authForm.addEventListener("submit", async e => {
+  e.preventDefault();
+  authError.textContent = "";
+  authSubmit.disabled = true;
+  try {
+    const res = await fetch("/api/" + authMode, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: document.getElementById("auth-user").value.trim(),
+        password: document.getElementById("auth-pass").value,
+      }),
+    });
+    const body = await res.json();
+    if (!res.ok) { authError.textContent = body.error || "something went wrong"; return; }
+    token = body.token;
+    username = body.username;
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, username);
+    updateAccountUi();
+    showAuth(false);
+    await pullData();
+  } catch {
+    authError.textContent = "network error — are you offline?";
+  } finally {
+    authSubmit.disabled = false;
+  }
+});
+
+document.getElementById("auth-skip").addEventListener("click", () => {
+  localStorage.setItem("tr1-skip-auth", "1");
+  showAuth(false);
+});
+
+function logout(expired) {
+  token = null;
+  username = null;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  updateAccountUi();
+  if (expired) showAuth(true);
+}
+
+document.getElementById("account-btn").addEventListener("click", () => {
+  if (username) {
+    if (confirm(`logged in as ${username}.\nlog out? (data stays on this device)`)) logout(false);
+  } else {
+    showAuth(true);
+  }
+});
 
 // ---------- date helpers (all local time) ----------
 
@@ -281,9 +421,9 @@ function renderStats() {
 
 const renderers = { today: renderToday, history: renderHistory, stats: renderStats };
 
-document.querySelectorAll(".tab").forEach(tab => {
+document.querySelectorAll(".tabs .tab").forEach(tab => {
   tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tabs .tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
     tab.classList.add("active");
     document.getElementById("screen-" + tab.dataset.screen).classList.add("active");
@@ -297,10 +437,20 @@ setInterval(() => {
   if (today() !== lastDay) { lastDay = today(); renderToday(); }
 }, 30000);
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) renderToday();
+  if (!document.hidden) { renderToday(); pullData(); }
 });
+window.addEventListener("online", () => pushData());
 
+// ---------- boot ----------
+
+updateAccountUi();
 renderToday();
+
+if (token) {
+  pullData(); // logged in: refresh from cloud
+} else if (!localStorage.getItem("tr1-skip-auth")) {
+  showAuth(true); // first visit: offer account or offline mode
+}
 
 // ---------- offline support ----------
 

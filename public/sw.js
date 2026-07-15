@@ -1,5 +1,5 @@
 /* TR-1 service worker: cache app shell so it works offline */
-const CACHE = "tr1-v1";
+const CACHE = "tr1-v2";
 const ASSETS = [
   "./",
   "./index.html",

@@ -310,3 +310,68 @@ body {
   color: var(--ink-soft);
   margin-top: 14px;
 }
+
+/* ===== auth screen ===== */
+.auth {
+  position: absolute;
+  inset: 0;
+  background: var(--plate);
+  border-radius: var(--radius);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 28px;
+  padding: 32px;
+}
+.auth.hidden { display: none; }
+.device { position: relative; }
+.brand.center { text-align: center; }
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-form input {
+  font-family: var(--mono);
+  font-size: 15px;
+  padding: 13px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  outline: none;
+}
+.auth-form input:focus { border-color: var(--orange); }
+.auth-error {
+  min-height: 18px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--orange);
+  text-align: center;
+}
+.auth-skip {
+  margin-top: 10px;
+  border: none;
+  background: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--ink-soft);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ===== header account area ===== */
+.head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.account-btn {
+  border: 2px solid var(--ink);
+  border-radius: 9px;
+  background: var(--plate-deep);
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.led-sync-ok { background: var(--orange) !important; }
