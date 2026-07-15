@@ -101,8 +101,7 @@ let authMode = "login";
 
 function updateAccountUi() {
   document.getElementById("account-btn").textContent = username || "offline";
-  document.getElementById("footnote-mode").textContent = username
-    ? `synced as ${username}` : "data stays on this device";
+  document.getElementById("footnote-mode").textContent = "made by Aquma";
   setSyncLed(!!username);
 }
 
@@ -206,6 +205,26 @@ document.getElementById("export-btn").addEventListener("click", () => {
 
 document.getElementById("import-btn").addEventListener("click", () =>
   document.getElementById("import-file").click());
+
+// clear all: tap once to arm, tap again within 4s to confirm (no popup)
+const clearAllBtn = document.getElementById("clear-all-btn");
+let clearArmTimer = null;
+clearAllBtn.addEventListener("click", () => {
+  if (clearArmTimer) {
+    clearTimeout(clearArmTimer);
+    clearArmTimer = null;
+    clearAllBtn.textContent = "clear all actions";
+    clearAllTasks();
+    settingsMsg.textContent = "all actions cleared (history kept)";
+  } else {
+    clearAllBtn.textContent = "tap again to confirm";
+    settingsMsg.textContent = "";
+    clearArmTimer = setTimeout(() => {
+      clearArmTimer = null;
+      clearAllBtn.textContent = "clear all actions";
+    }, 4000);
+  }
+});
 
 document.getElementById("import-file").addEventListener("change", async e => {
   const file = e.target.files[0];
@@ -410,8 +429,14 @@ function addTask(name) {
 }
 
 function removeTask(task) {
-  if (!confirm(`remove "${task.name}"?\n(history is kept)`)) return;
   task.archived = today();
+  save();
+  renderToday();
+}
+
+function clearAllTasks() {
+  const day = today();
+  for (const t of state.tasks) if (!t.archived) t.archived = day;
   save();
   renderToday();
 }

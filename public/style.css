@@ -411,6 +411,7 @@ body {
   box-shadow: 0 2px 0 var(--ink);
 }
 .mini-btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--ink); }
+.mini-btn.danger { color: var(--orange); }
 .settings-hint {
   font-size: 10px;
   color: var(--ink-soft);
