@@ -88,6 +88,7 @@ body {
   margin: 18px 0 8px;
 }
 .meter {
+  flex: none;
   display: grid;
   grid-template-columns: repeat(20, 1fr);
   gap: 3px;
@@ -102,7 +103,7 @@ body {
 .meter span.on { background: var(--orange); }
 
 /* ===== screens ===== */
-.screen { display: none; flex: 1; }
+.screen { display: none; flex: 1; min-height: 0; }
 .screen.active { display: flex; flex-direction: column; }
 
 /* ===== today: task list ===== */
